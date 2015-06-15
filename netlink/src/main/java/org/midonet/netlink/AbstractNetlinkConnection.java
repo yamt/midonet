@@ -379,9 +379,29 @@ public abstract class AbstractNetlinkConnection {
         reply.clear();
         int nbytes = channel.read(reply);
 
+        log.info("recv {} bytes", nbytes);
+
         reply.flip(); // sets the effective final limit for any number of msgs
         reply.mark();
         int finalLimit = reply.limit();
+
+        {
+            int pos = reply.position();
+            byte[] bs = new byte[reply.remaining()];
+            reply.get(bs);
+            reply.position(pos);
+
+            StringBuilder sb = new StringBuilder();
+            int i = 0;
+            for (Byte b: bs) {
+                if ((i % 16) == 0) {
+                    sb.append("\n");
+                }
+                i++;
+                sb.append(String.format("%02x ", b));
+            }
+            log.info("recv msg: {}", sb.toString());
+        }
 
         while (reply.remaining() >= NETLINK_HEADER_LEN) {
             // read the nlmsghdr and check for error
@@ -392,6 +412,9 @@ public abstract class AbstractNetlinkConnection {
             short flags = reply.getShort();     // flags
             int seq = reply.getInt();           // sequence no.
             int pid = reply.getInt();           // pid
+
+            log.info("recv netlink msg: len={}, type={}, flags={}, seq={}, pid={}, pid()={}",
+                     len, type, flags, seq, pid, pid());
 
             int nextPosition = position + len;
             reply.limit(nextPosition);          // "slice" the buffer to avoid
@@ -432,6 +455,7 @@ public abstract class AbstractNetlinkConnection {
                     byte ver = reply.get();      // version
                     reply.getShort();            // reserved
 
+                    log.info("recv cmd={} ver={}", cmd, ver);
                     if (seq == 0) {
                         // if the seq number is zero we are handling a PacketIn.
                         if (bucket.consumeToken()) {
