@@ -575,6 +575,15 @@ class DhcpImpl(val dhcpConfig: DhcpConfig,
                         .map { _.toBytes }
                 opt121Routes = sub.getOpt121Routes
 
+                // Add an on-link route for IPv4 link-local addresses
+                // This is a kludge for guests which don't know about
+                // link-local addresses.
+                val linkLocalRoute = new Opt121
+                linkLocalRoute.setRtDstSubnet(
+                    IPv4Subnet.fromCidr("169.254.0.0/16"))
+                linkLocalRoute.setGateway(IPv4Addr.fromString("0.0.0.0"))
+                opt121Routes.add(0, linkLocalRoute)
+
                 (sub.getInterfaceMTU match {
                     case 0 => mtu
                     case s: Short => Some(s)
