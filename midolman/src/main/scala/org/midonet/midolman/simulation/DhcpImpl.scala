@@ -17,6 +17,7 @@ package org.midonet.midolman.simulation
 
 import java.nio.{BufferOverflowException, ByteBuffer}
 import java.util.UUID
+import java.util.ArrayList
 
 import scala.collection.JavaConversions._
 import scala.collection.JavaConverters._
@@ -573,7 +574,6 @@ class DhcpImpl(val dhcpConfig: DhcpConfig,
                 dnsServerAddrsBytes =
                     Option(sub.getDnsServerAddrs).map{ _.toList}.getOrElse(Nil)
                         .map { _.toBytes }
-                opt121Routes = sub.getOpt121Routes
 
                 // Add an on-link route for IPv4 link-local addresses
                 // This is a kludge for guests which don't know about
@@ -582,7 +582,9 @@ class DhcpImpl(val dhcpConfig: DhcpConfig,
                 linkLocalRoute.setRtDstSubnet(
                     IPv4Subnet.fromCidr("169.254.0.0/16"))
                 linkLocalRoute.setGateway(IPv4Addr.fromString("0.0.0.0"))
-                opt121Routes.add(0, linkLocalRoute)
+                opt121Routes = new ArrayList[Opt121]
+                opt121Routes.add(linkLocalRoute)
+                opt121Routes.addAll(sub.getOpt121Routes)
 
                 (sub.getInterfaceMTU match {
                     case 0 => mtu
