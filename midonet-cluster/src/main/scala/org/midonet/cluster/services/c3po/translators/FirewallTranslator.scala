@@ -27,7 +27,7 @@ import org.midonet.cluster.models.Topology.Rule.Action
 import org.midonet.cluster.models.Topology._
 import org.midonet.cluster.services.c3po.C3POStorageManager.{Create, Delete, Update, Operation}
 import org.midonet.cluster.util.RangeUtil
-import org.midonet.cluster.util.UUIDUtil.asRichProtoUuid
+import org.midonet.cluster.util.UUIDUtil.{asRichProtoUuid, fromProto}
 import org.midonet.util.concurrent.toFutureOps
 
 class FirewallTranslator(protected val storage: ReadOnlyStorage)
@@ -137,7 +137,7 @@ class FirewallTranslator(protected val storage: ReadOnlyStorage)
             case nfe: NotFoundException =>
                 // A router with old translation might not have
                 // the forward chain
-                log.info("Creating fwd chain for {}", rId)
+                log.info(s"Creating fwd chain for ${fromProto(rId)}")
                 val name = RouterTranslator.forwardChainName(rId)
                 val chain = newChain(chainId, name)
                 val router = storage.get(classOf[Router], rId).await()
@@ -171,8 +171,8 @@ class FirewallTranslator(protected val storage: ReadOnlyStorage)
             // A firewall with no routers associated, going to INACTIVE.
             // Just forget it completely.
             val fwId = fw.getId
-            log.debug("Deleting firewall {} because no routers are associated",
-                      fwId)
+            log.debug(s"Deleting firewall ${fromProto(fwId)} because " +
+                      "no routers are associated")
             List(Delete(classOf[NeutronFirewall], fwId)) ++ translateDelete(fwId)
         } else {
             val chainId = fwdChainId(fw.getId)
@@ -189,7 +189,8 @@ class FirewallTranslator(protected val storage: ReadOnlyStorage)
                 // Update a firewall not known to us.  Just create one.
                 // This case happens when the neutron plugin omits
                 // the Create RPC because of the empty router list.
-                log.debug("Creating firewall {} for Update request", fw.getId)
+                log.debug(s"Creating firewall ${fromProto(fw.getId)} " +
+                          "for Update request")
                 List(Create(fw)) ++ translateCreate(fw)
             }
         }
