@@ -487,8 +487,9 @@ class RouterTranslator(sequenceDispenser: SequenceDispenser,
             .build()
         val skipSnatChain = tx.get(classOf[Chain],
                                    skipSnatChainId(router.getId))
-        tx.create(skipSnatGwPortRule)
-        tx.update(appendRules(
+        tx.create(skipSnatGwPortRule1)
+        tx.create(skipSnatGwPortRule2)
+        tx.update(appendRule(
             prependRules(skipSnatChain, skipSnatGwPortRule1.getId),
             skipSnatGwPortRule2.getId))
 
