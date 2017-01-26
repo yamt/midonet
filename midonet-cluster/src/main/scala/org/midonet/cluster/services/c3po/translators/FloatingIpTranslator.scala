@@ -141,20 +141,22 @@ class FloatingIpTranslator(stateTableStorage: StateTableStorage)
                                         dynamic = false))
             .build()
 
-        // Note: this rule can be per FIP-processing router ports,
+        // Note: these rules can be per FIP-processing router ports,
         // not per FIP.  however, currently there's no scalable way to
         // find FIPs handled by the same router port.
-        val skipSnatRule = Rule.newBuilder
-            .setId(fipSkipSnatRuleId(fip.getId))
+        val skipSnatRule1 = Rule.newBuilder
+            .setId(fipSkipSnatRule1Id(fip.getId))
             .setType(Rule.Type.LITERAL_RULE)
             .setAction(Rule.Action.RETURN)
             .setFipPortId(fip.getPortId)
-            .setCondition(anyFragCondition
-                .addInPortIds(rtrPortId)
-                .setInPortInv(true)
-                .addOutPortIds(rtrPortId)
-                .setOutPortInv(true)
-                .setConjunctionInv(true))
+            .setCondition(anyFragCondition.addOutPortIds(rtrPortId))
+            .build()
+        val skipSnatRule2 = Rule.newBuilder
+            .setId(fipSkipSnatRule2Id(fip.getId))
+            .setType(Rule.Type.LITERAL_RULE)
+            .setAction(Rule.Action.ACCEPT)
+            .setFipPortId(fip.getPortId)
+            .setCondition(anyFragCondition.addInPortIds(rtrPortId))
             .build()
 
         val inChain = tx.get(classOf[Chain], iChainId)
@@ -171,7 +173,9 @@ class FloatingIpTranslator(stateTableStorage: StateTableStorage)
 
         tx.update(prependRules(inChain, dnatRule.getId))
         tx.update(prependRules(floatSnatExactChain, snatExactRule.getId))
-        tx.update(prependRules(skipSnatChain, skipSnatRule.getId))
+        tx.update(appendRule(
+            prependRules(skipSnatChain, skipSnatRule1.getId),
+            skipSnatRule2.getId))
         if (isGwPort) {
             tx.update(prependRules(floatSnatChain, snatRule.getId))
         } else {
@@ -285,7 +289,9 @@ class FloatingIpTranslator(stateTableStorage: StateTableStorage)
         tx.delete(classOf[Rule], fipDnatRuleId(fip.getId), ignoresNeo = true)
         tx.delete(classOf[Rule], fipReverseDnatRuleId(fip.getId),
                   ignoresNeo = true)
-        tx.delete(classOf[Rule], fipSkipSnatRuleId(fip.getId),
+        tx.delete(classOf[Rule], fipSkipSnatRule1Id(fip.getId),
+                  ignoresNeo = true)
+        tx.delete(classOf[Rule], fipSkipSnatRule2Id(fip.getId),
                   ignoresNeo = true)
     }
 

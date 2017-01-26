@@ -298,26 +298,28 @@ Here's how rules for a logical router would look like:
 
         ==== skipSnatChain start
             // Apply SNAT (floating-ip SNAT or router's default SNAT)
-            // if it came from or is going to external-like network.
-            // (router interfaces with floating-ips, and the gateway port)
+            // 1. it goes to an external-like network,
+            // (that is, router interfaces with floating-ips, and
+            // the gateway port)
+            // or 2. it's E-W traffic.  (Neither in/outport is external-like)
             //
             // Note: iptables based implementations need to "emulate" inport
             // match (eg. using marks in PREROUTING) as it isn't available
             // in POSTROUTING.
             [per floating-ip]
-            (inport) matches (floating-ip port) -> RETURN
             (outport) matches (floating-ip port) -> RETURN
             [if default SNAT is enabled on the router]
-            inport == the gateway port -> RETURN
             outport == the gateway port -> RETURN
 
             ----- ordering barrier
 
-            // ... Otherwise, do not apply SNAT unless floating-ip DNAT
-            // was applied in PREROUTING.
-            // This allows E-W traffic to use fixed-ips even when those
-            // have floating-ips assigned.
-            //
+            [per floating-ip]
+            (inport) matches (floating-ip port) -> ACCEPT  // terminates
+            [if default SNAT is enabled on the router]
+            inport == the gateway port -> ACCEPT  // terminates
+
+            // dst-rewritten=true here means either 1. floating-ip DNAT,
+            // or 2. rev-SNAT was applied in PREROUTING.
             // Note: "--ctstate DNAT" might be used for iptables-based
             // implementations.
             dst-rewritten == false -> ACCEPT  // terminates

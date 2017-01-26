@@ -473,21 +473,24 @@ class RouterTranslator(sequenceDispenser: SequenceDispenser,
                                             config.translators.dynamicNatPortStart,
                                             config.translators.dynamicNatPortEnd))
 
-        val skipSnatGwPortRule = Rule.newBuilder
-            .setId(skipSnatGwPortRuleId(router.getId))
+        val skipSnatGwPortRule1 = Rule.newBuilder
+            .setId(skipSnatGwPortRule1Id(router.getId))
             .setType(Rule.Type.LITERAL_RULE)
             .setAction(Action.RETURN)
-            .setCondition(anyFragCondition
-                .addInPortIds(portId)
-                .setInPortInv(true)
-                .addOutPortIds(portId)
-                .setOutPortInv(true)
-                .setConjunctionInv(true))
+            .setCondition(anyFragCondition.addOutPortIds(portId))
+            .build()
+        val skipSnatGwPortRule2 = Rule.newBuilder
+            .setId(skipSnatGwPortRule2Id(router.getId))
+            .setType(Rule.Type.LITERAL_RULE)
+            .setAction(Action.ACCEPT)
+            .setCondition(anyFragCondition.addInPortIds(portId))
             .build()
         val skipSnatChain = tx.get(classOf[Chain],
                                    skipSnatChainId(router.getId))
         tx.create(skipSnatGwPortRule)
-        tx.update(prependRules(skipSnatChain, skipSnatGwPortRule.getId))
+        tx.update(appendRules(
+            prependRules(skipSnatChain, skipSnatGwPortRule1.getId),
+            skipSnatGwPortRule2.getId))
 
         List(applySnat(outRuleBuilder(outSnatRuleId(nRouter.getId))
                  .setCondition(outRuleConditionBuilder)),
@@ -523,7 +526,9 @@ class RouterTranslator(sequenceDispenser: SequenceDispenser,
             tx.delete(classOf[Rule], outSnatRuleId(routerId), ignoresNeo = true)
             tx.delete(classOf[Rule], dstRewrittenSnatRuleId(routerId),
                       ignoresNeo = true)
-            tx.delete(classOf[Rule], skipSnatGwPortRuleId(routerId),
+            tx.delete(classOf[Rule], skipSnatGwPortRule1Id(routerId),
+                      ignoresNeo = true)
+            tx.delete(classOf[Rule], skipSnatGwPortRule2Id(routerId),
                       ignoresNeo = true)
         }
     }
@@ -591,8 +596,10 @@ object RouterTranslator {
     def dstRewrittenSnatRuleId(routerId: UUID): UUID =
         routerId.xorWith(0xf5d39101f0431a3eL, 0xdd7a9236bf83a3e7L)
 
-    def skipSnatGwPortRuleId(routerId: UUID): UUID =
+    def skipSnatGwPortRule1Id(routerId: UUID): UUID =
         routerId.xorWith(0x6f90386f458e12ffL, 0x6ec14164bde7cee6L)
+    def skipSnatGwPortRule2Id(routerId: UUID): UUID =
+        routerId.xorWith(0x6a68eacaec7e7075L, 0xa21d868b7315973bL)
     def skipSnatAcceptRuleId(routerId: UUID): UUID =
         routerId.xorWith(0x9483a5a98a0098fbL, 0xb6fa7a44027c7faaL)
 }
