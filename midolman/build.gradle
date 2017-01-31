@@ -251,7 +251,6 @@ packaging {
                  '/etc/midolman/logback-minions.xml' ]
     fpmOpts = ['-a', 'all',
                '--category', 'network',
-               '--url', 'https://www.midonet.org',
                '--epoch', '2']
 }
 
