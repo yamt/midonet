@@ -45,6 +45,9 @@ def _git_revcount():
 
 
 def _version():
+    version = os.getenv("_PMC_VERSION_OVERRIDE")
+    if version is not None:
+        return version
     toplevel = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     regex = re.compile('\s*midonetVersion\s*=\s*"([^"]+)"')
     with open('/'.join([toplevel, 'build.gradle'])) as f:

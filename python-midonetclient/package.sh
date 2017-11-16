@@ -108,7 +108,11 @@ function package_deb() {
     DEB_ARGS="$DEB_ARGS --epoch 2"
     DEB_ARGS="$DEB_ARGS --deb-priority optional"
 
-    export PYTHONDONTWRITEBYTECODE=1
+    _PMC_VERSION_OVERRIDE="$version"
+    export _PMC_VERSION_OVERRIDE
+    PYTHONDONTWRITEBYTECODE=1
+    export PYTHONDONTWRITEBYTECODE
+
     eval fpm $FPM_BASE_ARGS $DEB_ARGS \
         --name python-midonetclient-doc \
         --description \"$DESCRIPTION - doc\" \
